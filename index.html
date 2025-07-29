@@ -16,8 +16,9 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- pdf.js CDN (Librería principal y su worker) -->
-    <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
+    <!-- pdf.js AUTOHOSPEDADO (Recomendado para evitar problemas de CDN) -->
+    <!-- Asegúrate de haber copiado pdf.js y pdf.worker.js a tu carpeta public/lib/ -->
+    <script src="/lib/pdf.js"></script>
 
     <style>
         /* Estilos base del cuerpo */
@@ -512,18 +513,18 @@
     <script>
         // --- Configuración Global ---
         // !!! MODIFICA ESTAS LÍNEAS PARA TUS ARCHIVOS !!!
-        // Si tu 'index.html' y la carpeta 'public' están en la raíz de tu proyecto Vercel,
-        // entonces las rutas deben ser relativas a la raíz (empezando con '/').
+        // Si tu 'index.html' está en la raíz de tu proyecto Vercel,
+        // y tus archivos están en la carpeta 'public/', las rutas deben ser relativas a la raíz del dominio (empezando con '/').
         const PDF_URL = '/mi_documento.pdf';
         const BACKGROUND_IMAGE_URL = '/fondo_elegante.png';
         const PAGE_TURN_SOUND_URL = '/page_turn_sound.mp3';
 
-        // --- SI USAS GITHUB PAGES y los archivos están en una carpeta 'assets/' junto a tu index.html:
-        // const PDF_URL = './assets/mi_documento.pdf';
-        // const BACKGROUND_IMAGE_URL = './assets/fondo_elegante.png';
-        // const PAGE_TURN_SOUND_URL = './assets/page_turn_sound.mp3';
+        // --- SI USAS GITHUB PAGES y los archivos están en una carpeta 'public/' junto a tu index.html:
+        // const PDF_URL = './public/mi_documento.pdf';
+        // const BACKGROUND_IMAGE_URL = './public/fondo_elegante.png';
+        // const PAGE_TURN_SOUND_URL = './public/page_turn_sound.mp3';
 
-        // --- SI QUIERES USAR EJEMPLOS PÚBLICOS PARA PROBAR:
+        // --- SI QUIERES USAR EJEMPLOS PÚBLICOS PARA PROBAR (Útiles si tus archivos locales siguen sin funcionar):
         // const PDF_URL = 'https://mozilla.github.io/pdf.js/examples/learning/helloworld.pdf';
         // const BACKGROUND_IMAGE_URL = 'https://images.unsplash.com/photo-1519681393784-a93987cb0f4a?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
         // const PAGE_TURN_SOUND_URL = 'https://assets.mixkit.co/sfx/preview/mixkit-paper-turn-page-002.mp3';
@@ -573,10 +574,9 @@
         let soundEnabled = true; // Sonido de animación habilitado por defecto
         let isAnimating = false; // Bandera para evitar clics rápidos durante la animación
 
-        // --- Inicializar Worker de PDF.js ---
-        // Este worker es fundamental para que pdf.js procese el PDF en segundo plano.
-        // Siempre debe apuntar a la versión worker.js de pdf.js.
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.js';
+        // --- Inicializar Worker de PDF.js (apuntando a tu copia local) ---
+        // DEBES ASEGURARTE QUE pdf.worker.js ESTÉ EN /public/lib/
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/lib/pdf.worker.js';
 
         // --- Funciones Principales ---
 
