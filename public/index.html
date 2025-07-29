@@ -512,8 +512,7 @@
 
     <script>
         // --- Configuración Global ---
-        // Estas URLs ahora son relativas a la raíz de tu dominio de Vercel.
-        // ¡ASEGÚRATE DE QUE index.html Y TODOS ESTOS ARCHIVOS ESTÉN DENTRO DE LA CARPETA 'public/' EN TU REPOSITORIO!
+        // ¡Estas URLs ahora son correctas para Vercel ASUMIENDO que todos los archivos están dentro de la carpeta 'public/'!
         const PDF_URL = '/mi_documento.pdf';
         const BACKGROUND_IMAGE_URL = '/fondo_elegante.png';
         const PAGE_TURN_SOUND_URL = '/page_turn_sound.mp3';
@@ -563,8 +562,7 @@
         let soundEnabled = true; // Sonido de animación habilitado por defecto
         let isAnimating = false; // Bandera para evitar clics rápidos durante la animación
 
-        // --- Inicializar Worker de PDF.js (apuntando a tu copia autohospedada) ---
-        // DEBES ASEGURARTE QUE pdf.worker.js ESTÉ EN LA CARPETA 'lib/' dentro de 'public/'.
+        // --- Inicializar Worker de PDF.js (apuntando a tu copia autohospedada dentro de public/lib/) ---
         pdfjsLib.GlobalWorkerOptions.workerSrc = '/lib/pdf.worker.js';
 
         // --- Funciones Principales ---
