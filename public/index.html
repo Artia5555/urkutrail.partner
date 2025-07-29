@@ -18,7 +18,7 @@
 
     <!-- pdf.js AUTOHOSPEDADO -->
     <!-- Ruta relativa a la carpeta 'lib/' dentro de 'public/' -->
-    <script src="/lib/pdf.js"></script>
+      <script src="/public/lib/pdf.js"></script>
 
     <style>
         /* Estilos base del cuerpo */
@@ -508,16 +508,23 @@
     </div>
 
     <!-- Audio para la animación de pasar página -->
-    <audio id="pageTurnSound" src="" preload="auto"></audio>
+    <audio id="pageTurnSound" src="" preload="auto"></audio> 
 
     <script>
         // --- Configuración Global ---
-        // ¡Estas URLs ahora son correctas para Vercel ASUMIENDO que todos los archivos están dentro de la carpeta 'public/'!
+        // ¡MODIFICA ESTAS LÍNEAS SOLO SI LOS PASOS ANTERIORES NO FUNCIONARON!
+        // Esto asume que tu index.html está en public/ y que vercel no la esta sirviendo como root.
         const PDF_URL = '/public/mi_documento.pdf';
-const BACKGROUND_IMAGE_URL = '/public/fondo_elegante.png';
-const PAGE_TURN_SOUND_URL = '/public/page_turn_sound.mp3';
-// Y también:
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/public/lib/pdf.worker.js';
+        const BACKGROUND_IMAGE_URL = '/public/fondo_elegante.png';
+        const PAGE_TURN_SOUND_URL = '/public/page_turn_sound.mp3';
+
+        const WHATSAPP_NUMBER = '59988237842';
+
+        // ... El resto de tu código JavaScript ...
+
+        // --- Inicializar Worker de PDF.js (apuntando a tu copia autohospedada dentro de public/lib/) ---
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/public/lib/pdf.worker.js';
+
         const WHATSAPP_NUMBER = '59988237842'; // Número de WhatsApp de prueba
 
         // --- Elementos del DOM ---
