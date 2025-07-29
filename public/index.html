@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador PDF Flipbook</title>
+
+    <!-- Google Fonts: Inter para un diseño moderno -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome para iconos (versión más reciente) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCAbortQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- pdf.js AUTOHOSPEDADO -->
+    <!-- Ruta relativa a la carpeta 'lib/' dentro de 'public/' -->
+    <script src="/lib/pdf.js"></script>
+
+    <style>
+        /* Estilos base del cuerpo */
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Evita el scroll del body */
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed; /* Efecto parallax para el fondo */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #e2e8f0; /* Color de texto general claro */
+            transition: background-image 0.5s ease; /* Transición suave para el fondo */
+            background-color: #1a202c; /* Fondo de respaldo si la imagen no carga */
+        }
+
+        /* Contenedor principal del visualizador (simula el libro) */
+        .viewer-container {
+            background-color: rgba(31, 41, 55, 0.95); /* Gray-800 semi-transparente */
+            border-radius: 12px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6); /* Sombra suave y profunda */
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            max-width: 95vw;
+            max-height: 95vh;
+            width: 1400px; /* Ancho base deseado */
+            aspect-ratio: 16/9; /* Proporción de aspecto de un libro abierto */
+            min-width: 320px; /* Mínimo para móviles */
+            min-height: 200px;
+            transition: all 0.3s ease-in-out; /* Transición para ajustes de tamaño */
+        }
+
+        /* Barra de controles superior */
+        .top-bar {
+            background-color: rgba(55, 65, 81, 0.9); /* Gray-700 semi-transparente */
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap; /* Los botones se envuelven en pantallas pequeñas */
+            gap: 0.75rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .top-bar button {
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0.6rem;
+            border-radius: 9999px; /* Botones redondos */
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out, color 0.2s ease-in-out;
+            color: #cbd5e1; /* Color de icono claro */
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .top-bar button:hover {
+            background-color: rgba(75, 85, 99, 0.7); /* Gray-600 al pasar el ratón */
+            transform: translateY(-2px);
+            color: #f3f4f6; /* Icono más blanco al pasar el ratón */
+        }
+
+        .top-bar button:active {
+            transform: translateY(0);
+        }
+
+        /* Contenedor de las páginas PDF con perspectiva para 3D */
+        .pdf-pages-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            user-select: none; /* Evita la selección de texto al arrastrar */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            perspective: 2000px; /* Profundidad de perspectiva para el efecto 3D */
+            transform-style: preserve-3d;
+        }
+
+        /* Envoltura de cada página del PDF */
+        .pdf-page-wrapper {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%); /* Centra el wrapper inicialmente */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5); /* Sombra para simular grosor */
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            background-color: #ffffff; /* Fondo blanco para las páginas renderizadas */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform-style: preserve-3d;
+            backface-visibility: hidden; /* Oculta el reverso para evitar artefactos al girar */
+            min-width: 250px;
+            min-height: 350px;
+        }
+
+        .pdf-page-wrapper canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* Posicionamiento y origen de transformación para las páginas izquierda y derecha */
+        .pdf-page-wrapper.left-page {
+            left: 50%; /* Borde derecho de la página en el centro del contenedor */
+            transform: translate(calc(-100% - 2px), -50%); /* 2px de espacio entre páginas */
+            transform-origin: 100% 50%; /* Rota desde el borde derecho (la "espina" del libro) */
+            z-index: 10;
+        }
+
+        .pdf-page-wrapper.right-page {
+            left: 50%; /* Borde izquierdo de la página en el centro del contenedor */
+            transform: translate(2px, -50%); /* 2px de espacio entre páginas */
+            transform-origin: 0% 50%; /* Rota desde el borde izquierdo (la "espina" del libro) */
+            z-index: 10;
+        }
+
+        /* Animaciones de paso de página (efecto "flip") */
+        /* Página saliendo hacia la siguiente */
+        .page-turn-next-left-out {
+            transform: translate(calc(-100% - 2px), -50%) rotateY(-180deg); /* Gira hacia atrás */
+            opacity: 0;
+            z-index: 5; /* Se oculta detrás de las nuevas páginas */
+        }
+        .page-turn-next-right-out {
+            transform: translate(2px, -50%) rotateY(180deg); /* Gira hacia adelante */
+            opacity: 0;
+            z-index: 5;
+        }
+
+        /* Página saliendo hacia la anterior */
+        .page-turn-prev-left-out {
+            transform: translate(calc(-100% - 2px), -50%) rotateY(180deg); /* Gira hacia adelante */
+            opacity: 0;
+            z-index: 5;
+        }
+        .page-turn-prev-right-out {
+            transform: translate(2px, -50%) rotateY(-180deg); /* Gira hacia atrás */
+            opacity: 0;
+            z-index: 5;
+        }
+
+        /* Páginas completamente ocultas (fuera de vista o al final del PDF) */
+        .pdf-page-wrapper.hidden-page {
+            opacity: 0;
+            pointer-events: none; /* No interactuable */
+            visibility: hidden; /* Oculta completamente del flujo */
+        }
+
+        /* Estado de pantalla completa */
+        .fullscreen-body {
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+        }
+        .fullscreen .viewer-container {
+            border-radius: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            aspect-ratio: unset !important; /* Elimina la proporción en pantalla completa */
+        }
+        .fullscreen .top-bar {
+            border-radius: 0;
+            margin-bottom: 0.25rem;
+            padding: 0.5rem;
+        }
+        .fullscreen .whatsapp-btn {
+            display: none !important; /* Oculta el botón de WhatsApp en pantalla completa */
+        }
+        .fullscreen #page-display {
+            bottom: 0.5rem;
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+        }
+
+        /* Botón de WhatsApp flotante */
+        .whatsapp-btn {
+            background-color: #25d366; /* Verde de WhatsApp */
+            color: white;
+            padding: 1rem;
+            border-radius: 50%;
+            font-size: 2rem;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.5);
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            border: 3px solid rgba(255, 255, 255, 0.2); /* Borde sutil */
+        }
+        .whatsapp-btn:hover {
+            transform: scale(1.05) translateY(-3px); /* Pequeño levantamiento */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Animación de "pulse" para WhatsApp */
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(37, 211, 102, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+        }
+        .whatsapp-btn.pulse-animation {
+            animation: pulse 2s infinite;
+        }
+
+        /* Estilos para modales (Tabla de Contenido y Búsqueda) */
+        .modal {
+            background-color: rgba(17, 24, 39, 0.85); /* Gray-900 semi-transparente */
+            backdrop-filter: blur(8px); /* Efecto de desenfoque */
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+        }
+        .modal-content {
+            background-color: rgba(31, 41, 55, 1); /* Gray-800 */
+            padding: 2.5rem;
+            border-radius: 16px; /* Más redondeado */
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8); /* Sombra pronunciada */
+            width: 90%;
+            max-width: 800px;
+            max-height: 85%;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(75, 85, 99, 0.5); /* Borde sutil */
+        }
+        .modal-content-scrollable {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-top: 1rem;
+            padding-right: 0.5rem; /* Espacio para el scrollbar */
+        }
+
+        /* Estilos de la barra de scroll para modales */
+        .modal-content-scrollable::-webkit-scrollbar {
+            width: 8px;
+        }
+        .modal-content-scrollable::-webkit-scrollbar-track {
+            background: #4b5563; /* gray-600 */
+            border-radius: 10px;
+        }
+        .modal-content-scrollable::-webkit-scrollbar-thumb {
+            background: #60a5fa; /* blue-400 */
+            border-radius: 10px;
+        }
+        .modal-content-scrollable::-webkit-scrollbar-thumb:hover {
+            background: #3b82f6; /* blue-500 */
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #4b5563; /* gray-600 */
+            padding-bottom: 0.75rem;
+        }
+        .modal-header h2 {
+            font-size: 2.25rem; /* text-4xl */
+            font-weight: 700;
+            color: #f3f4f6;
+        }
+        .modal-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            color: #d1d5db;
+            cursor: pointer;
+            transition: color 0.2s ease-in-out;
+        }
+        .modal-close-btn:hover {
+            color: #f3f4f6;
+        }
+
+        /* Entradas y botones dentro de los modales */
+        .modal-input {
+            flex-grow: 1;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            background-color: #4b5563; /* gray-600 */
+            border: 1px solid #6b7280; /* gray-500 */
+            color: #e2e8f0;
+            outline: none;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .modal-input::placeholder {
+            color: #9ca3af; /* gray-400 */
+        }
+        .modal-input:focus {
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+        }
+        .modal-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            background-color: #3b82f6; /* blue-600 */
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .modal-btn:hover {
+            background-color: #2563eb; /* blue-700 */
+        }
+
+        /* Lista de Tabla de Contenido y resultados de búsqueda */
+        #toc-content ul, #search-results div {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #toc-content li {
+            margin-bottom: 0.5rem;
+            padding: 0.25rem 0;
+        }
+        #toc-content a {
+            color: #60a5fa; /* blue-400 */
+            text-decoration: none;
+            transition: color 0.2s ease-in-out;
+            display: block;
+            padding: 0.25rem 0;
+            font-size: 1.125rem; /* text-lg */
+        }
+        #toc-content a:hover {
+            color: #93c5fd; /* blue-300 */
+            text-decoration: underline;
+        }
+        #toc-content ul ul {
+            margin-left: 1.5rem;
+            border-left: 2px solid #4b5563; /* gray-600 */
+            padding-left: 0.5rem;
+        }
+
+        #search-results .result-item {
+            background-color: #4b5563; /* gray-600 */
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        #search-results .result-item:hover {
+            background-color: #6b7280; /* gray-500 */
+        }
+        #search-results .result-item p {
+            margin: 0;
+            line-height: 1.4;
+        }
+        #search-results .result-item .highlight {
+            background-color: #facc15; /* yellow-400 */
+            color: #1f2937; /* gray-900 */
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* Overlay de carga */
+        #loading-overlay {
+            background-color: rgba(17, 24, 39, 0.95); /* gray-900 semi-transparente */
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 70;
+            color: white;
+            transition: opacity 0.3s ease;
+        }
+        .spinner {
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-top: 5px solid #fff;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Clase de utilidad para ocultar elementos */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <!-- Overlay de Carga -->
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <p class="mt-4 text-xl font-medium">Cargando PDF...</p>
+    </div>
+
+    <!-- Contenedor Principal del Visor -->
+    <div id="viewer-container" class="viewer-container">
+
+        <!-- Barra Superior de Controles -->
+        <div class="top-bar">
+            <button id="homeBtn" title="Primera Página"><i class="fas fa-home"></i></button>
+            <button id="prevBtn" title="Página Anterior"><i class="fas fa-chevron-left"></i></button>
+            <button id="nextBtn" title="Página Siguiente"><i class="fas fa-chevron-right"></i></button>
+            <button id="tocBtn" title="Tabla de Contenido"><i class="fas fa-book"></i></button>
+            <button id="shareBtn" title="Compartir Página"><i class="fas fa-share-alt"></i></button>
+            <button id="fullscreenBtn" title="Pantalla Completa"><i class="fas fa-expand"></i></button>
+            <button id="searchBtn" title="Buscar"><i class="fas fa-search"></i></button>
+            <button id="soundToggleBtn" title="Activar/Desactivar Sonido"><i class="fas fa-volume-up"></i></button>
+            <button id="zoomInBtn" title="Acercar"><i class="fas fa-plus"></i></button>
+            <button id="zoomOutBtn" title="Alejar"><i class="fas fa-minus"></i></button>
+        </div>
+
+        <!-- Contenedor de las Páginas del PDF -->
+        <div id="pdf-pages-container" class="pdf-pages-container">
+            <div id="left-page-wrapper" class="pdf-page-wrapper left-page">
+                <canvas id="pdf-canvas-left"></canvas>
+            </div>
+            <div id="right-page-wrapper" class="pdf-page-wrapper right-page">
+                <canvas id="pdf-canvas-right"></canvas>
+            </div>
+        </div>
+
+        <!-- Indicador de Número de Página -->
+        <div id="page-display" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-700 px-4 py-2 rounded-full text-sm text-gray-200 shadow-md">
+            Página <span id="current-page-number">1</span> de <span id="total-pages-number">0</span>
+        </div>
+
+    </div>
+
+    <!-- Botón de WhatsApp -->
+    <a id="whatsapp-btn" href="https://wa.me/59988237842" target="_blank"
+       class="whatsapp-btn pulse-animation" title="Contactar por WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <!-- Modal para Tabla de Contenido -->
+    <div id="toc-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Tabla de Contenido</h2>
+                <button id="closeTocModalBtn" class="modal-close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="toc-content" class="modal-content-scrollable">
+                <p class="text-gray-400">Cargando tabla de contenido...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Búsqueda -->
+    <div id="search-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Buscar en el PDF</h2>
+                <button id="closeSearchModalBtn" class="modal-close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 mb-4">
+                <input type="text" id="search-input" placeholder="Buscar palabra o número..."
+                       class="modal-input">
+                <button id="execute-search-btn" class="modal-btn">Buscar</button>
+            </div>
+            <div id="search-results" class="modal-content-scrollable">
+                <p class="text-gray-400">Introduce tu búsqueda y presiona 'Buscar'.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio para la animación de pasar página -->
+    <audio id="pageTurnSound" src="" preload="auto"></audio>
+
+    <script>
+        // --- Configuración Global ---
+        // Estas URLs ahora son relativas a la raíz de tu dominio de Vercel.
+        // ¡ASEGÚRATE DE QUE index.html Y TODOS ESTOS ARCHIVOS ESTÉN DENTRO DE LA CARPETA 'public/' EN TU REPOSITORIO!
+        const PDF_URL = '/mi_documento.pdf';
+        const BACKGROUND_IMAGE_URL = '/fondo_elegante.png';
+        const PAGE_TURN_SOUND_URL = '/page_turn_sound.mp3';
+
+        const WHATSAPP_NUMBER = '59988237842'; // Número de WhatsApp de prueba
+
+        // --- Elementos del DOM ---
+        const body = document.body;
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const viewerContainer = document.getElementById('viewer-container');
+        const homeBtn = document.getElementById('homeBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const tocBtn = document.getElementById('tocBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const searchBtn = document.getElementById('searchBtn');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundToggleIcon = soundToggleBtn.querySelector('i');
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const pdfPagesContainer = document.getElementById('pdf-pages-container');
+        const leftPageCanvas = document.getElementById('pdf-canvas-left');
+        const rightPageCanvas = document.getElementById('pdf-canvas-right');
+        const leftPageWrapper = document.getElementById('left-page-wrapper');
+        const rightPageWrapper = document.getElementById('right-page-wrapper');
+        const currentPageNumberSpan = document.getElementById('current-page-number');
+        const totalPagesNumberSpan = document.getElementById('total-pages-number');
+        const whatsappBtn = document.getElementById('whatsapp-btn');
+        const pageTurnSound = document.getElementById('pageTurnSound');
+
+        // Modales
+        const tocModal = document.getElementById('toc-modal');
+        const closeTocModalBtn = document.getElementById('closeTocModalBtn');
+        const tocContent = document.getElementById('toc-content');
+        const searchModal = document.getElementById('search-modal');
+        const closeSearchModalBtn = document.getElementById('closeSearchModalBtn');
+        const searchInput = document.getElementById('search-input');
+        const executeSearchBtn = document.getElementById('execute-search-btn');
+        const searchResults = document.getElementById('search-results');
+
+        // --- Variables de Estado Globales ---
+        let pdfDoc = null; // Objeto PDFDocumentProxy de pdf.js
+        let currentPage = 1; // Número de página actual (1-indexado, representa la página de la izquierda del par)
+        let numPages = 0;
+        let zoomLevel = 1.0; // Nivel de zoom inicial
+        let soundEnabled = true; // Sonido de animación habilitado por defecto
+        let isAnimating = false; // Bandera para evitar clics rápidos durante la animación
+
+        // --- Inicializar Worker de PDF.js (apuntando a tu copia autohospedada) ---
+        // DEBES ASEGURARTE QUE pdf.worker.js ESTÉ EN LA CARPETA 'lib/' dentro de 'public/'.
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/lib/pdf.worker.js';
+
+        // --- Funciones Principales ---
+
+        /**
+         * Establece la imagen de fondo del body.
+         * Asegúrate de que la URL de la imagen de fondo sea accesible.
+         */
+        function setBackground() {
+            body.style.backgroundImage = `url('${BACKGROUND_IMAGE_URL}')`;
+            // Puedes añadir un .onerror para saber si la imagen no carga
+            const img = new Image();
+            img.src = BACKGROUND_IMAGE_URL;
+            img.onerror = () => {
+                console.error("Error al cargar la imagen de fondo:", BACKGROUND_IMAGE_URL);
+                body.style.backgroundColor = '#1a202c'; // Fallback a color sólido
+                body.style.backgroundImage = 'none';
+            };
+        }
+
+        /**
+         * Carga el documento PDF.
+         * Muestra un overlay de carga mientras el PDF se descarga y se procesa.
+         */
+        async function loadPdf() {
+            loadingOverlay.classList.remove('hidden'); // Mostrar spinner
+            try {
+                const loadingTask = pdfjsLib.getDocument(PDF_URL);
+                pdfDoc = await loadingTask.promise;
+                numPages = pdfDoc.numPages;
+                totalPagesNumberSpan.textContent = numPages;
+                console.log(`PDF cargado: ${numPages} páginas.`);
+
+                // Ajusta la página inicial si la URL hash apunta a una página fuera de rango,
+                // o a una página par que no sea la última (para asegurar un par de páginas).
+                if (currentPage > numPages) {
+                    currentPage = 1; // Si la página del hash es mayor que el total, ir a la primera
+                } else if (currentPage % 2 === 0 && currentPage < numPages) {
+                    currentPage--; // Si es par y no es la última, ir a la impar anterior para ver el par
+                } else if (currentPage % 2 === 0 && currentPage === numPages && numPages % 2 !== 0) {
+                     // Si es la última página (impar) pero el hash era par (que no existe)
+                     currentPage--; // Esto solo pasaría si el hash fuera numPages+1, pero el clamp ya lo manejaría
+                }
+
+                await renderPages(); // Renderiza las páginas iniciales
+            } catch (error) {
+                console.error('Error al cargar el PDF:', error);
+                alert(`Error al cargar el PDF. Por favor, verifica la URL de tu PDF y la conexión a internet.\nDetalles: ${error.message}`);
+            } finally {
+                loadingOverlay.classList.add('hidden'); // Ocultar spinner
+            }
+        }
+
+        /**
+         * Renderiza las páginas actuales (izquierda y derecha) en sus respectivos canvases.
+         * Calcula dinámicamente la escala para que las páginas encajen en el contenedor.
+         */
+        async function renderPages() {
+            if (!pdfDoc) return;
+
+            const leftPageNum = currentPage;
+            const rightPageNum = currentPage + 1;
+
+            currentPageNumberSpan.textContent = currentPage;
+
+            // Calcula el tamaño disponible para cada página dentro del contenedor
+            const containerWidth = pdfPagesContainer.clientWidth;
+            const containerHeight = pdfPagesContainer.clientHeight;
+
+            // Deja un pequeño espacio central de 4px (2px por página)
+            const horizontalGap = 4;
+            const targetWidthForOnePage = (containerWidth - horizontalGap) / 2;
+            const targetHeightForOnePage = containerHeight;
+
+            // Determina la escala base para que la primera página (como referencia) encaje
+            let maxScale = 1;
+            try {
+                const firstPage = await pdfDoc.getPage(1);
+                const viewport = firstPage.getViewport({ scale: 1 });
+                const aspectRatio = viewport.width / viewport.height;
+
+                const scaleByWidth = targetWidthForOnePage / viewport.width;
+                const scaleByHeight = targetHeightForOnePage / viewport.height;
+
+                maxScale = Math.min(scaleByWidth, scaleByHeight);
+            } catch (error) {
+                console.warn("No se pudo obtener la primera página para calcular la escala. Usando escala predeterminada.", error);
+                maxScale = 0.8; // Fallback
+            }
+
+            // Renderiza la página izquierda
+            if (leftPageNum >= 1 && leftPageNum <= numPages) {
+                await renderSinglePage(leftPageNum, leftPageCanvas, leftPageWrapper, maxScale);
+                leftPageWrapper.classList.remove('hidden-page');
+            } else {
+                leftPageWrapper.classList.add('hidden-page'); // Oculta si no hay página izquierda (ej. en la primera carga si el PDF está vacío)
+            }
+
+            // Renderiza la página derecha
+            if (rightPageNum >= 1 && rightPageNum <= numPages) {
+                await renderSinglePage(rightPageNum, rightPageCanvas, rightPageWrapper, maxScale);
+                rightPageWrapper.classList.remove('hidden-page');
+            } else {
+                rightPageWrapper.classList.add('hidden-page'); // Oculta si no hay página derecha (ej. última página impar)
+            }
+        }
+
+        /**
+         * Renderiza una única página del PDF en un elemento canvas dado.
+         * @param {number} pageNum - Número de la página a renderizar (1-indexado).
+         * @param {HTMLCanvasElement} canvasElement - El elemento <canvas> donde se dibujará la página.
+         * @param {HTMLElement} wrapperElement - El contenedor padre del canvas para ajustar su tamaño.
+         * @param {number} baseScale - La escala base para ajustar la página al tamaño del contenedor.
+         */
+        async function renderSinglePage(pageNum, canvasElement, wrapperElement, baseScale) {
+            const page = await pdfDoc.getPage(pageNum);
+            const scaleToRender = baseScale * zoomLevel; // Combina la escala base con el zoom del usuario
+            const viewport = page.getViewport({ scale: scaleToRender });
+
+            canvasElement.height = viewport.height;
+            canvasElement.width = viewport.width;
+
+            const context = canvasElement.getContext('2d');
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport,
+            };
+
+            await page.render(renderContext).promise;
+
+            // Ajusta el tamaño del wrapper para que coincida con el canvas escalado, manteniendo proporciones
+            wrapperElement.style.width = `${viewport.width}px`;
+            wrapperElement.style.height = `${viewport.height}px`;
+        }
+
+        /**
+         * Ejecuta la animación de paso de página.
+         * @param {'next'|'prev'} direction - Dirección de la animación (hacia adelante o hacia atrás).
+         */
+        function animatePageTurn(direction) {
+            if (isAnimating) return; // Evita animaciones superpuestas
+            isAnimating = true;
+
+            if (soundEnabled) {
+                pageTurnSound.currentTime = 0; // Reinicia el sonido al inicio
+                pageTurnSound.play().catch(e => console.warn("Error al reproducir sonido de página:", e));
+            }
+
+            // Aplica las clases CSS para iniciar la animación de giro
+            if (direction === 'next') {
+                leftPageWrapper.classList.add('page-turn-next-left-out');
+                rightPageWrapper.classList.add('page-turn-next-right-out');
+            } else { // 'prev'
+                leftPageWrapper.classList.add('page-turn-prev-left-out');
+                rightPageWrapper.classList.add('page-turn-prev-right-out');
+            }
+
+            // Espera a que la animación CSS termine para renderizar las nuevas páginas
+            setTimeout(async () => {
+                // Remueve las clases de animación para resetear el estado
+                leftPageWrapper.classList.remove('page-turn-next-left-out', 'page-turn-prev-left-out');
+                rightPageWrapper.classList.remove('page-turn-next-right-out', 'page-turn-prev-right-out');
+
+                // Renderiza las páginas actualizadas en sus posiciones finales
+                await renderPages();
+                isAnimating = false;
+            }, 600); // La duración debe coincidir con la transición CSS (0.6s)
+        }
+
+        /**
+         * Navega a un número de página específico.
+         * Ajusta el número de página si el PDF tiene un número impar de páginas.
+         * @param {number} pageNum - El número de página (1-indexado) al que navegar.
+         * @param {boolean} [animate=true] - Si se debe animar la transición de página.
+         */
+        async function goToPage(pageNum, animate = true) {
+            if (!pdfDoc || isAnimating) return;
+
+            let targetPage = Math.max(1, Math.min(pageNum, numPages));
+
+            // Para un flipbook que muestra pares de páginas, la "página actual"
+            // siempre representa la página izquierda del par.
+            // Si el targetPage es par y no es la última página del PDF,
+            // ajustamos a la página impar anterior para mostrar un par completo.
+            if (targetPage % 2 === 0 && targetPage < numPages) {
+                targetPage--;
+            }
+
+            if (targetPage === currentPage) return; // No hacer nada si ya estamos en esta página
+
+            const direction = targetPage > currentPage ? 'next' : 'prev';
+            currentPage = targetPage;
+
+            if (animate) {
+                animatePageTurn(direction);
+            } else {
+                await renderPages(); // Sin animación, solo renderiza directamente
+            }
+
+            updateUrlHash(); // Actualiza el hash de la URL para compartir/refrescar
+        }
+
+        /**
+         * Navega al siguiente par de páginas.
+         */
+        function nextPage() {
+            if (currentPage < numPages) {
+                // Si estamos en la penúltima página y es impar, vamos a la última página (que será única)
+                if (currentPage === numPages - 1 && numPages % 2 === 0) {
+                     goToPage(numPages);
+                } else if (currentPage + 2 <= numPages) { // Si hay al menos dos páginas más disponibles
+                    goToPage(currentPage + 2);
+                } else if (currentPage + 1 <= numPages) { // Si solo queda una página (la última)
+                     goToPage(numPages); // Ir a la última página, se mostrará sola
+                }
+            }
+        }
+
+        /**
+         * Navega al par de páginas anterior.
+         */
+        function prevPage() {
+            if (currentPage > 1) {
+                // Asegura que no bajemos de la página 1
+                goToPage(currentPage - 2 < 1 ? 1 : currentPage - 2);
+            }
+        }
+
+        /**
+         * Activa o desactiva el modo de pantalla completa para el visualizador.
+         */
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                viewerContainer.requestFullscreen().catch(err => {
+                    alert(`Error intentando el modo de pantalla completa: ${err.message} (${err.name})`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        /**
+         * Maneja los cambios de estado de pantalla completa para actualizar la UI.
+         */
+        function handleFullscreenChange() {
+            if (document.fullscreenElement) {
+                body.classList.add('fullscreen-body');
+                viewerContainer.classList.add('fullscreen');
+            } else {
+                body.classList.remove('fullscreen-body');
+                viewerContainer.classList.remove('fullscreen');
+            }
+            // Re-renderiza las páginas para ajustar su escala al nuevo tamaño del contenedor
+            renderPages();
+        }
+
+        /**
+         * Activa o desactiva el sonido de la animación de paso de página.
+         */
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            soundToggleIcon.className = soundEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+            pageTurnSound.muted = !soundEnabled; // Silencia/des-silencia el elemento de audio
+        }
+
+        /**
+         * Ajusta el nivel de zoom y re-renderiza las páginas.
+         * @param {number} delta - Cambio en el nivel de zoom (ej. 0.1 para acercar, -0.1 para alejar).
+         */
+        function adjustZoom(delta) {
+            // Limita el zoom entre 0.5x y 3.0x
+            const newZoom = Math.max(0.5, Math.min(zoomLevel + delta, 3.0));
+            if (newZoom !== zoomLevel) { // Solo si el zoom ha cambiado
+                zoomLevel = newZoom;
+                renderPages(); // Vuelve a renderizar con el nuevo zoom
+            }
+        }
+
+        /**
+         * Muestra la Tabla de Contenido (Outline) del PDF en un modal.
+         * La TOC se construye de forma recursiva si tiene sub-elementos.
+         */
+        async function showTableOfContents() {
+            if (!pdfDoc) return;
+            tocContent.innerHTML = '<p class="text-gray-400">Cargando tabla de contenido...</p>';
+            tocModal.classList.remove('hidden');
+
+            const outline = await pdfDoc.getOutline();
+
+            if (!outline || outline.length === 0) {
+                tocContent.innerHTML = '<p class="text-gray-400">Este PDF no contiene una Tabla de Contenido.</p>';
+                return;
+            }
+
+            tocContent.innerHTML = ''; // Limpia el contenido previo
+
+            // Función recursiva para renderizar los elementos del esquema
+            function renderOutlineItems(items, ulElement) {
+                items.forEach(item => {
+                    const li = document.createElement('li');
+                    const link = document.createElement('a');
+                    link.href = '#';
+                    link.className = 'text-blue-400 hover:text-blue-200 transition-colors text-lg block';
+                    link.textContent = item.title;
+                    link.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        if (item.dest) {
+                            try {
+                                // Obtiene el índice de página (0-indexado) del destino del esquema
+                                const pageRef = await pdfDoc.getPageIndex(item.dest[0]);
+                                goToPage(pageRef + 1); // Navega (goToPage es 1-indexado)
+                            } catch (error) {
+                                console.error('Error al navegar a destino de esquema:', error);
+                                alert('No se pudo navegar a esta sección del documento.');
+                            }
+                        } else if (item.url) {
+                            window.open(item.url, '_blank'); // Abre enlaces externos en nueva pestaña
+                        }
+                        tocModal.classList.add('hidden'); // Cierra el modal después de la selección
+                    });
+                    li.appendChild(link);
+                    ulElement.appendChild(li);
+
+                    // Si el elemento tiene sub-elementos, renderizarlos recursivamente
+                    if (item.items && item.items.length > 0) {
+                        const nestedUl = document.createElement('ul');
+                        li.appendChild(nestedUl);
+                        renderOutlineItems(item.items, nestedUl);
+                    }
+                });
+            }
+
+            const rootUl = document.createElement('ul');
+            renderOutlineItems(outline, rootUl);
+            tocContent.appendChild(rootUl);
+        }
+
+        /**
+         * Realiza la búsqueda de texto en el PDF y muestra los resultados en un modal.
+         */
+        async function searchPdf() {
+            const query = searchInput.value.trim();
+            if (!query) {
+                searchResults.innerHTML = '<p class="text-gray-400">Por favor, introduce un término de búsqueda.</p>';
+                return;
+            }
+
+            searchResults.innerHTML = '<p class="text-blue-400">Buscando...</p>';
+            let foundCount = 0;
+            const resultsHtml = document.createElement('div');
+
+            // Itera sobre cada página del PDF para extraer su texto
+            for (let i = 1; i <= numPages; i++) {
+                const page = await pdfDoc.getPage(i);
+                const textContent = await page.getTextContent();
+                // Une los elementos de texto para formar una cadena de texto por página
+                const pageText = textContent.items.map(item => item.str).join(' ');
+
+                // Realiza la búsqueda sin distinción entre mayúsculas y minúsculas
+                if (pageText.toLowerCase().includes(query.toLowerCase())) {
+                    foundCount++;
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'result-item';
+                    // Muestra el número de página y un fragmento del texto con la coincidencia resaltada
+                    resultItem.innerHTML = `<p class="font-bold">Página ${i}</p><p class="text-sm text-gray-300">${getSnippet(pageText, query)}</p>`;
+                    resultItem.addEventListener('click', () => {
+                        goToPage(i); // Navega a la página del resultado
+                        searchModal.classList.add('hidden'); // Cierra el modal de búsqueda
+                    });
+                    resultsHtml.appendChild(resultItem);
+                }
+            }
+
+            if (foundCount > 0) {
+                searchResults.innerHTML = `<p class="mb-4 text-green-400">Se encontraron ${foundCount} resultados.</p>`;
+                searchResults.appendChild(resultsHtml);
+            } else {
+                searchResults.innerHTML = `<p class="text-yellow-400">No se encontraron resultados para "${query}".</p>`;
+            }
+        }
+
+        /**
+         * Obtiene un fragmento de texto alrededor de la palabra clave de búsqueda.
+         * Resalta la palabra clave encontrada dentro del fragmento.
+         * @param {string} text - Texto completo de la página.
+         * @param {string} query - Término de búsqueda.
+         * @returns {string} Fragmento de texto con la palabra clave resaltada.
+         */
+        function getSnippet(text, query) {
+            const lowerText = text.toLowerCase();
+            const lowerQuery = query.toLowerCase();
+            const index = lowerText.indexOf(lowerQuery);
+
+            if (index === -1) return text.substring(0, 100) + '...'; // Si no se encuentra, devuelve el inicio
+
+            const start = Math.max(0, index - 50); // 50 caracteres antes
+            const end = Math.min(text.length, index + query.length + 50); // 50 caracteres después
+
+            let snippet = text.substring(start, end);
+            // Reemplaza la consulta con un span para resaltar (insensible a mayúsculas/minúsculas)
+            const regex = new RegExp(query, 'gi');
+            snippet = snippet.replace(regex, (match) => `<span class="highlight">${match}</span>`);
+
+            return (start > 0 ? '...' : '') + snippet + (end < text.length ? '...' : '');
+        }
+
+        /**
+         * Copia la URL de la página actual (con el hash de página) al portapapeles.
+         */
+        function shareCurrentPage() {
+            const pageUrl = window.location.origin + window.location.pathname + `#page=${currentPage}`;
+            navigator.clipboard.writeText(pageUrl)
+                .then(() => {
+                    alert('Enlace a la página actual copiado al portapapeles: ' + pageUrl);
+                })
+                .catch(err => {
+                    console.error('Error al copiar el enlace:', err);
+                    alert('No se pudo copiar el enlace. Puedes copiarlo manualmente: ' + pageUrl);
+                });
+        }
+
+        /**
+         * Actualiza el hash de la URL en la barra del navegador con el número de página actual.
+         */
+        function updateUrlHash() {
+            history.replaceState(null, '', `#page=${currentPage}`);
+        }
+
+        /**
+         * Comprueba el hash de la URL al cargar la página e intenta navegar a la página especificada.
+         */
+        function checkUrlHash() {
+            const hash = window.location.hash;
+            const match = hash.match(/#page=(\d+)/);
+            if (match && match[1]) {
+                const page = parseInt(match[1], 10);
+                if (!isNaN(page) && page >= 1) {
+                    currentPage = page; // Establece la página actual para que loadPdf la renderice al inicio
+                }
+            }
+        }
+
+        // --- Event Listeners ---
+        // Escucha el evento de redimensionamiento de la ventana para ajustar el renderizado del PDF
+        window.addEventListener('resize', () => {
+            clearTimeout(window.resizeTimer); // Debounce para evitar renderizados excesivos
+            window.resizeTimer = setTimeout(() => {
+                renderPages();
+            }, 250);
+        });
+
+        // Escucha cambios en el estado de pantalla completa
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+        // Botones de navegación y acción
+        homeBtn.addEventListener('click', () => goToPage(1));
+        prevBtn.addEventListener('click', prevPage);
+        nextBtn.addEventListener('click', nextPage);
+        tocBtn.addEventListener('click', showTableOfContents);
+        shareBtn.addEventListener('click', shareCurrentPage);
+        fullscreenBtn.addEventListener('click', toggleFullScreen);
+        searchBtn.addEventListener('click', () => searchModal.classList.remove('hidden'));
+        soundToggleBtn.addEventListener('click', toggleSound);
+        zoomInBtn.addEventListener('click', () => adjustZoom(0.1));
+        zoomOutBtn.addEventListener('click', () => adjustZoom(-0.1));
+
+        // Botones para cerrar modales
+        closeTocModalBtn.addEventListener('click', () => tocModal.classList.add('hidden'));
+        closeSearchModalBtn.addEventListener('click', () => searchModal.classList.add('hidden'));
+
+        // Eventos para la funcionalidad de búsqueda
+        executeSearchBtn.addEventListener('click', searchPdf);
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchPdf();
+            }
+        });
+
+        // --- Soporte Táctil/Swipe para Navegación ---
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const SWIPE_THRESHOLD = 75; // Distancia mínima en píxeles para detectar un swipe
+
+        pdfPagesContainer.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) { // Solo un dedo para el swipe
+                touchStartX = e.touches[0].clientX;
+            }
+        }, { passive: true }); // 'passive: true' para mejorar el rendimiento de scroll
+
+        pdfPagesContainer.addEventListener('touchend', (e) => {
+            if (e.changedTouches.length === 1) {
+                touchEndX = e.changedTouches[0].clientX;
+                const deltaX = touchEndX - touchStartX;
+
+                if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
+                    if (deltaX > 0) { // Deslizar hacia la derecha (página anterior)
+                        prevPage();
+                    } else { // Deslizar hacia la izquierda (página siguiente)
+                        nextPage();
+                    }
+                }
+            }
+        }, { passive: true });
+
+        // --- Configuración Inicial al Cargar ---
+        // Se ejecuta una vez que todo el DOM está cargado
+        document.addEventListener('DOMContentLoaded', () => {
+            setBackground(); // Establece la imagen de fondo
+            pageTurnSound.src = PAGE_TURN_SOUND_URL; // Configura la URL del sonido de página
+            whatsappBtn.href = `https://wa.me/${WHATSAPP_NUMBER}`; // Configura el enlace de WhatsApp
+            checkUrlHash(); // Comprueba si hay un hash de página en la URL al cargar
+            loadPdf(); // Inicia la carga del PDF
+        });
+    </script>
+</body>
+</html>
