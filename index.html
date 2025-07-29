@@ -4,8 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizador PDF Flipbook</title>
+
+    <!-- Google Fonts: Inter para un diseño moderno -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCAbortQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+
     <!-- pdf.js CDN -->
     <!-- La librería principal de pdf.js para el visor -->
     <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
@@ -13,7 +23,7 @@
     <style>
         /* Estilos personalizados y de Tailwind para un diseño minimalista */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', sans-serif;
             overflow: hidden; /* Evita el scroll del body */
             background-size: cover;
             background-position: center;
@@ -29,15 +39,17 @@
         .viewer-container {
             background-color: rgba(31, 41, 55, 0.95); /* Gray-800 semi-transparente */
             border-radius: 12px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
             padding: 1.5rem;
             display: flex;
             flex-direction: column;
             position: relative;
-            max-width: 90vw;
-            max-height: 90vh;
-            width: 1200px; /* Ancho deseado para el contenedor */
-            height: 800px; /* Alto deseado para el contenedor */
+            max-width: 95vw; /* Más espacio en pantallas grandes */
+            max-height: 95vh;
+            width: 1400px; /* Ancho deseado para el contenedor */
+            aspect-ratio: 16/9; /* Proporción de aspecto para el contenedor del visor */
+            min-width: 320px; /* Ancho mínimo para móviles */
+            min-height: 200px; /* Alto mínimo para móviles */
         }
 
         /* Barra superior de controles */
@@ -50,7 +62,7 @@
             justify-content: space-around;
             align-items: center;
             flex-wrap: wrap; /* Permite que los botones se envuelvan en pantallas pequeñas */
-            gap: 0.5rem; /* Espacio entre botones */
+            gap: 0.75rem; /* Espacio entre botones */
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
@@ -58,7 +70,7 @@
             background-color: transparent;
             border: none;
             cursor: pointer;
-            padding: 0.6rem 0.8rem;
+            padding: 0.6rem; /* Reducido para hacer los botones más compactos */
             border-radius: 9999px; /* Botones redondos */
             transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
             color: #cbd5e1; /* Texto/icono de botón claro */
@@ -89,18 +101,24 @@
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
+            perspective: 1500px; /* Perspectiva para el efecto 3D */
+            transform-style: preserve-3d; /* Asegura que los hijos se rendericen en 3D */
         }
 
         .pdf-page-wrapper {
             position: absolute;
             top: 50%;
-            transform: translate(0, -50%); /* Centrado vertical inicialmente */
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
-            transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transform: translate(-50%, -50%); /* Centra el wrapper inicialmente */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5); /* Sombra más profunda */
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
             background-color: #ffffff; /* Fondo blanco para las páginas */
             display: flex; /* Para centrar el canvas */
             justify-content: center;
             align-items: center;
+            transform-style: preserve-3d; /* Para que la rotación de sus hijos sea 3D */
+            backface-visibility: hidden; /* Evita que el reverso sea visible durante la rotación */
+            min-width: 250px; /* Asegura un tamaño mínimo de página */
+            min-height: 350px; /* Asegura un tamaño mínimo de página */
         }
 
         .pdf-page-wrapper canvas {
@@ -109,42 +127,42 @@
             max-height: 100%;
         }
 
-        /* Posicionamiento de las páginas izquierda y derecha */
+        /* Posicionamiento de las páginas izquierda y derecha para que se toquen en el centro */
         .pdf-page-wrapper.left-page {
-            left: 50%;
-            transform: translate(calc(-100% - 10px), -50%); /* Ajuste para espacio entre páginas */
-            transform-origin: right center;
+            left: 50%; /* Posiciona el lado derecho del wrapper en el centro */
+            transform: translate(calc(-100% - 2px), -50%); /* Ajuste para un pequeño solapamiento o hueco de 2px */
+            transform-origin: 100% 50%; /* Rota desde el borde derecho */
             z-index: 10;
         }
 
         .pdf-page-wrapper.right-page {
-            right: 50%;
-            transform: translate(calc(100% + 10px), -50%); /* Ajuste para espacio entre páginas */
-            transform-origin: left center;
+            left: 50%; /* Posiciona el lado izquierdo del wrapper en el centro */
+            transform: translate(2px, -50%); /* Ajuste para un pequeño solapamiento o hueco de 2px */
+            transform-origin: 0% 50%; /* Rota desde el borde izquierdo */
             z-index: 10;
         }
 
-        /* Animaciones de paso de página */
+        /* Animaciones de paso de página (más limpias con perspectiva) */
         /* Al pasar a la siguiente página */
         .page-turn-next-left-out {
-            transform: translate(calc(-100% - 10px), -50%) rotateY(-90deg);
+            transform: translate(calc(-100% - 2px), -50%) rotateY(-180deg); /* Gira hacia atrás */
             opacity: 0;
             z-index: 5; /* Poner debajo temporalmente */
         }
         .page-turn-next-right-out {
-            transform: translate(calc(100% + 10px), -50%) rotateY(90deg);
+            transform: translate(2px, -50%) rotateY(180deg); /* Gira hacia adelante */
             opacity: 0;
             z-index: 5;
         }
 
         /* Al pasar a la página anterior */
         .page-turn-prev-left-out {
-            transform: translate(calc(-100% - 10px), -50%) rotateY(90deg);
+            transform: translate(calc(-100% - 2px), -50%) rotateY(180deg); /* Gira hacia adelante */
             opacity: 0;
             z-index: 5;
         }
         .page-turn-prev-right-out {
-            transform: translate(calc(100% + 10px), -50%) rotateY(-90deg);
+            transform: translate(2px, -50%) rotateY(-180deg); /* Gira hacia atrás */
             opacity: 0;
             z-index: 5;
         }
@@ -157,34 +175,34 @@
         }
 
         /* Estado de pantalla completa */
-        .fullscreen {
-            margin: 0 !important; /* Elimina márgenes en fullscreen */
+        .fullscreen-body {
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+        }
+        .fullscreen .viewer-container {
             border-radius: 0 !important;
             padding: 0 !important;
             box-shadow: none !important;
             width: 100vw !important;
             height: 100vh !important;
-        }
-        .fullscreen .viewer-container {
-            width: 100vw;
-            height: 100vh;
-            margin: 0;
-            border-radius: 0;
-            padding: 1rem; /* Pequeño padding para los bordes */
-            box-shadow: none;
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            aspect-ratio: unset !important; /* Elimina el aspect-ratio en fullscreen */
         }
         .fullscreen .top-bar {
-            width: 100%;
             border-radius: 0;
-            margin-bottom: 0.5rem; /* Menos espacio en fullscreen */
+            margin-bottom: 0.25rem; /* Menos espacio en fullscreen */
+            padding: 0.5rem;
         }
         .fullscreen .whatsapp-btn {
             display: none !important; /* Oculta el botón de WhatsApp en pantalla completa */
         }
         .fullscreen #page-display {
             bottom: 0.5rem; /* Ajusta la posición en fullscreen */
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
         }
-
 
         /* Botón de WhatsApp */
         .whatsapp-btn {
@@ -193,7 +211,7 @@
             padding: 1rem;
             border-radius: 50%;
             font-size: 2rem;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.5);
             position: fixed;
             bottom: 2rem;
             right: 2rem;
@@ -202,9 +220,11 @@
             align-items: center;
             justify-content: center;
             transition: transform 0.2s ease-in-out;
+            border: 3px solid rgba(255, 255, 255, 0.2); /* Borde sutil */
         }
         .whatsapp-btn:hover {
-            transform: scale(1.1);
+            transform: scale(1.05) translateY(-3px); /* Pequeño levantamiento */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
         }
 
         /* Animación de "pulse" para WhatsApp */
@@ -219,9 +239,9 @@
 
         /* Estilos para modales (Tabla de Contenido y Búsqueda) */
         .modal {
-            background-color: rgba(17, 24, 39, 0.95); /* Gray-900 semi-transparente */
-            backdrop-filter: blur(5px); /* Efecto de desenfoque */
-            -webkit-backdrop-filter: blur(5px);
+            background-color: rgba(17, 24, 39, 0.85); /* Gray-900 semi-transparente */
+            backdrop-filter: blur(8px); /* Efecto de desenfoque */
+            -webkit-backdrop-filter: blur(8px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -231,14 +251,15 @@
         }
         .modal-content {
             background-color: rgba(31, 41, 55, 1); /* Gray-800 */
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.7);
+            padding: 2.5rem;
+            border-radius: 16px; /* Más redondeado */
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8); /* Sombra más pronunciada */
             width: 90%;
-            max-width: 700px;
-            max-height: 80%;
+            max-width: 800px; /* Ancho máximo aumentado */
+            max-height: 85%; /* Alto máximo aumentado */
             display: flex;
             flex-direction: column;
+            border: 1px solid rgba(75, 85, 99, 0.5); /* Borde sutil */
         }
         .modal-content-scrollable {
             flex-grow: 1;
@@ -256,29 +277,30 @@
             border-radius: 10px;
         }
         .modal-content-scrollable::-webkit-scrollbar-thumb {
-            background: #6b7280; /* gray-500 */
+            background: #60a5fa; /* blue-400 */
             border-radius: 10px;
         }
         .modal-content-scrollable::-webkit-scrollbar-thumb:hover {
-            background: #9ca3af; /* gray-400 */
+            background: #3b82f6; /* blue-500 */
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             border-bottom: 1px solid #4b5563; /* gray-600 */
-            padding-bottom: 0.5rem;
+            padding-bottom: 0.75rem;
         }
         .modal-header h2 {
-            font-size: 1.875rem; /* text-3xl */
+            font-size: 2.25rem; /* text-4xl */
             font-weight: 700; /* font-bold */
+            color: #f3f4f6; /* Texto más claro */
         }
         .modal-close-btn {
             background: none;
             border: none;
-            font-size: 1.5rem;
+            font-size: 1.8rem; /* Icono más grande */
             color: #d1d5db; /* gray-300 */
             cursor: pointer;
             transition: color 0.2s ease-in-out;
@@ -290,7 +312,7 @@
         /* Entradas y botones dentro de los modales */
         .modal-input {
             flex-grow: 1;
-            padding: 0.75rem;
+            padding: 0.75rem 1rem;
             border-radius: 8px;
             background-color: #4b5563; /* gray-600 */
             border: 1px solid #6b7280; /* gray-500 */
@@ -303,10 +325,10 @@
         }
         .modal-input:focus {
             border-color: #3b82f6; /* blue-500 */
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
         }
         .modal-btn {
-            padding: 0.75rem 1.25rem;
+            padding: 0.75rem 1.5rem;
             border-radius: 8px;
             background-color: #3b82f6; /* blue-600 */
             color: white;
@@ -334,6 +356,7 @@
             transition: color 0.2s ease-in-out;
             display: block;
             padding: 0.25rem 0;
+            font-size: 1.125rem; /* text-lg */
         }
         #toc-content a:hover {
             color: #93c5fd; /* blue-300 */
@@ -347,7 +370,7 @@
 
         #search-results .result-item {
             background-color: #4b5563; /* gray-600 */
-            padding: 0.75rem;
+            padding: 1rem;
             border-radius: 8px;
             margin-bottom: 0.75rem;
             cursor: pointer;
@@ -365,11 +388,12 @@
             color: #1f2937; /* gray-900 */
             padding: 2px 4px;
             border-radius: 4px;
+            font-weight: 600;
         }
 
         /* Overlay de carga */
         #loading-overlay {
-            background-color: rgba(17, 24, 39, 0.9); /* gray-900 semi-transparente */
+            background-color: rgba(17, 24, 39, 0.95); /* gray-900 semi-transparente */
             position: fixed;
             inset: 0;
             display: flex;
@@ -383,8 +407,8 @@
             border: 5px solid rgba(255, 255, 255, 0.3);
             border-top: 5px solid #fff;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
@@ -411,16 +435,16 @@
 
         <!-- Barra Superior de Controles -->
         <div class="top-bar">
-            <button id="homeBtn" title="Primera Página">🏠</button>
-            <button id="prevBtn" title="Página Anterior">◀️</button>
-            <button id="nextBtn" title="Página Siguiente">▶️</button>
-            <button id="tocBtn" title="Tabla de Contenido">📚</button>
-            <button id="shareBtn" title="Compartir Página">🔗</button>
-            <button id="fullscreenBtn" title="Pantalla Completa">📺</button>
-            <button id="searchBtn" title="Buscar">🔍</button>
-            <button id="soundToggleBtn" title="Activar/Desactivar Sonido">🔊</button>
-            <button id="zoomInBtn" title="Acercar">➕</button>
-            <button id="zoomOutBtn" title="Alejar">➖</button>
+            <button id="homeBtn" title="Primera Página"><i class="fas fa-home"></i></button>
+            <button id="prevBtn" title="Página Anterior"><i class="fas fa-chevron-left"></i></button>
+            <button id="nextBtn" title="Página Siguiente"><i class="fas fa-chevron-right"></i></button>
+            <button id="tocBtn" title="Tabla de Contenido"><i class="fas fa-book"></i></button>
+            <button id="shareBtn" title="Compartir Página"><i class="fas fa-share-alt"></i></button>
+            <button id="fullscreenBtn" title="Pantalla Completa"><i class="fas fa-expand"></i></button>
+            <button id="searchBtn" title="Buscar"><i class="fas fa-search"></i></button>
+            <button id="soundToggleBtn" title="Activar/Desactivar Sonido"><i class="fas fa-volume-up"></i></button>
+            <button id="zoomInBtn" title="Acercar"><i class="fas fa-plus"></i></button>
+            <button id="zoomOutBtn" title="Alejar"><i class="fas fa-minus"></i></button>
         </div>
 
         <!-- Contenedor de las Páginas del PDF -->
@@ -443,7 +467,7 @@
     <!-- Botón de WhatsApp -->
     <a id="whatsapp-btn" href="https://wa.me/59988237842" target="_blank"
        class="whatsapp-btn pulse-animation" title="Contactar por WhatsApp">
-        💬
+        <i class="fab fa-whatsapp"></i>
     </a>
 
     <!-- Modal para Tabla de Contenido -->
@@ -451,7 +475,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Tabla de Contenido</h2>
-                <button id="closeTocModalBtn" class="modal-close-btn">✖️</button>
+                <button id="closeTocModalBtn" class="modal-close-btn"><i class="fas fa-times"></i></button>
             </div>
             <div id="toc-content" class="modal-content-scrollable">
                 <p class="text-gray-400">Cargando tabla de contenido...</p>
@@ -464,9 +488,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Buscar en el PDF</h2>
-                <button id="closeSearchModalBtn" class="modal-close-btn">✖️</button>
+                <button id="closeSearchModalBtn" class="modal-close-btn"><i class="fas fa-times"></i></button>
             </div>
-            <div class="flex gap-2 mb-4">
+            <div class="flex flex-col sm:flex-row gap-2 mb-4">
                 <input type="text" id="search-input" placeholder="Buscar palabra o número..."
                        class="modal-input">
                 <button id="execute-search-btn" class="modal-btn">Buscar</button>
@@ -478,13 +502,22 @@
     </div>
 
     <!-- Audio para la animación de pasar página -->
-    <audio id="pageTurnSound" src="https://github.com/Artia5555/urkutrail.partner/blob/520dcbcdc6a7fea9f7fe71bf1e4a183f2b668793/turn-a-page-336933.mp3" preload="auto"></audio>
+    <audio id="pageTurnSound" src="https://assets.mixkit.co/sfx/preview/mixkit-paper-turn-page-002.mp3" preload="auto"></audio>
 
     <script>
         // --- Configuración ---
-        const PDF_URL = 'PLAN ESTRATÉGICO DE AUSPICIOS SEGUNDO BORRADOR .pdf'; // URL de tu PDF
-        // URL de tu imagen de fondo. Puedes usar una ruta local si el HTML está en un servidor (ej. 'images/background.jpg')
-        const BACKGROUND_IMAGE_URL = 'https://github.com/Artia5555/urkutrail.partner/blob/00b3f6b4f0c8452b2cbc1c7f14306fb458981945/background.png';
+        // !!! MUY IMPORTANTE: REEMPLAZA ESTAS URLs CON LAS TUYAS PROPIAS !!!
+        // Asegúrate de que los archivos estén PUBLICAMENTE ACCESIBLES en tu despliegue de Vercel/GitHub Pages.
+        // Ejemplos para GitHub Pages:
+        // PDF_URL = 'https://raw.githubusercontent.com/tu-usuario/tu-repositorio/main/assets/tu-pdf.pdf';
+        // BACKGROUND_IMAGE_URL = 'https://raw.githubusercontent.com/tu-usuario/tu-repositorio/main/assets/tu-fondo.jpg';
+        // Ejemplos para Vercel (si los pones en la carpeta `public` de tu proyecto):
+        // PDF_URL = '/tu-pdf.pdf'; // O '/public/tu-pdf.pdf' si tu proyecto está configurado para servir estáticos desde 'public'
+        // BACKGROUND_IMAGE_URL = '/tu-fondo.jpg'; // O '/public/tu-fondo.jpg'
+
+        const PDF_URL = 'https://github.com/Artia5555/urkutrail.partner/blob/11a0b0753d616cd91d5e6aa149d5cca747265988/PLAN%20ESTRAT%C3%89GICO%20DE%20AUSPICIOS%20SEGUNDO%20BORRADOR%20.pdf'; // PDF de ejemplo
+        const BACKGROUND_IMAGE_URL = 'https://github.com/Artia5555/urkutrail.partner/blob/11a0b0753d616cd91d5e6aa149d5cca747265988/background.png'; // Imagen de fondo de Unsplash
+        const PAGE_TURN_SOUND_URL = 'https://github.com/Artia5555/urkutrail.partner/blob/11a0b0753d616cd91d5e6aa149d5cca747265988/turn-a-page-336933.mp3'; // Sonido de página de Mixkit
         const WHATSAPP_NUMBER = '59988237842'; // Número de WhatsApp de prueba
 
         // --- Elementos del DOM ---
@@ -499,6 +532,7 @@
         const fullscreenBtn = document.getElementById('fullscreenBtn');
         const searchBtn = document.getElementById('searchBtn');
         const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundToggleIcon = soundToggleBtn.querySelector('i');
         const zoomInBtn = document.getElementById('zoomInBtn');
         const zoomOutBtn = document.getElementById('zoomOutBtn');
         const pdfPagesContainer = document.getElementById('pdf-pages-container');
@@ -528,11 +562,8 @@
         let zoomLevel = 1.0; // Nivel de zoom inicial
         let soundEnabled = true; // Sonido de animación habilitado por defecto
         let isAnimating = false; // Bandera para evitar clics rápidos durante la animación
-        let currentRenderScale = 1; // Escala calculada dinámicamente para ajuste
 
         // --- Inicializar Worker de PDF.js ---
-        // Esto es crucial para que pdf.js funcione en el navegador.
-        // Apunta al worker.js provisto por el CDN de pdf.js.
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.js';
 
         // --- Funciones Principales ---
@@ -555,10 +586,20 @@
                 numPages = pdfDoc.numPages;
                 totalPagesNumberSpan.textContent = numPages;
                 console.log(`PDF cargado: ${numPages} páginas.`);
+
+                // Ajusta la página inicial si el hash indica una página fuera de rango o impar al final
+                if (currentPage > numPages) {
+                    currentPage = 1;
+                } else if (currentPage % 2 === 0 && currentPage === numPages) { // Si es la última página par, ajústala a la impar anterior
+                     currentPage--;
+                } else if (currentPage % 2 === 0 && currentPage < numPages) { // Si es una página par y no es la última, ajusta a la impar anterior para mostrar el par
+                    currentPage--;
+                }
+
                 await renderPages(); // Renderiza las páginas iniciales
             } catch (error) {
                 console.error('Error al cargar el PDF:', error);
-                alert('No se pudo cargar el PDF. Por favor, verifica la URL y la conexión.');
+                alert(`Error al cargar el PDF. Verifica la URL y la consola para más detalles.\n${error.message}`);
             } finally {
                 loadingOverlay.classList.add('hidden'); // Oculta el spinner
             }
@@ -570,23 +611,44 @@
         async function renderPages() {
             if (!pdfDoc) return;
 
-            // Determina los números de página a renderizar para el par actual
             const leftPageNum = currentPage;
             const rightPageNum = currentPage + 1;
 
             currentPageNumberSpan.textContent = currentPage;
 
+            // Calcula el ancho y alto objetivo para cada página
+            const containerWidth = pdfPagesContainer.clientWidth;
+            const containerHeight = pdfPagesContainer.clientHeight;
+
+            // Considera un pequeño espacio central si es necesario, o que se junten
+            const horizontalGap = 4; // 2px para cada lado de cada página para un total de 4px de espacio
+            const targetWidthForOnePage = (containerWidth - horizontalGap) / 2;
+            const targetHeightForOnePage = containerHeight; // Las páginas pueden ocupar el 100% de la altura del contenedor
+
+            // Determinar la escala máxima para que la página encaje completamente
+            let maxScale = 1;
+            if (pdfDoc.getPage(1)) { // Usamos la primera página para obtener el aspecto
+                const firstPage = await pdfDoc.getPage(1);
+                const viewport = firstPage.getViewport({ scale: 1 });
+                const aspectRatio = viewport.width / viewport.height;
+
+                const scaleByWidth = targetWidthForOnePage / viewport.width;
+                const scaleByHeight = targetHeightForOnePage / viewport.height;
+
+                maxScale = Math.min(scaleByWidth, scaleByHeight);
+            }
+
             // Renderiza la página izquierda
-            if (leftPageNum <= numPages) {
-                await renderSinglePage(leftPageNum, leftPageCanvas, leftPageWrapper);
+            if (leftPageNum >= 1 && leftPageNum <= numPages) {
+                await renderSinglePage(leftPageNum, leftPageCanvas, leftPageWrapper, maxScale);
                 leftPageWrapper.classList.remove('hidden-page');
             } else {
                 leftPageWrapper.classList.add('hidden-page'); // Oculta si no hay página
             }
 
             // Renderiza la página derecha
-            if (rightPageNum <= numPages) {
-                await renderSinglePage(rightPageNum, rightPageCanvas, rightPageWrapper);
+            if (rightPageNum >= 1 && rightPageNum <= numPages) {
+                await renderSinglePage(rightPageNum, rightPageCanvas, rightPageWrapper, maxScale);
                 rightPageWrapper.classList.remove('hidden-page');
             } else {
                 rightPageWrapper.classList.add('hidden-page'); // Oculta si no hay página (ej. última página impar)
@@ -598,48 +660,27 @@
          * @param {number} pageNum Número de la página a renderizar.
          * @param {HTMLCanvasElement} canvasElement Elemento canvas donde dibujar.
          * @param {HTMLElement} wrapperElement Elemento contenedor de la página para dimensionamiento.
+         * @param {number} maxAvailableScale La escala máxima calculada para el contenedor.
          */
-        async function renderSinglePage(pageNum, canvasElement, wrapperElement) {
-            if (!pdfDoc || pageNum < 1 || pageNum > numPages) return;
-
+        async function renderSinglePage(pageNum, canvasElement, wrapperElement, maxAvailableScale) {
             const page = await pdfDoc.getPage(pageNum);
-            const viewport = page.getViewport({ scale: 1 }); // Viewport original a escala 1
+            const scaleToRender = maxAvailableScale * zoomLevel;
+            const viewport = page.getViewport({ scale: scaleToRender });
 
-            // Calcular la escala para que la página se ajuste al contenedor del visor
-            const containerHeight = pdfPagesContainer.clientHeight;
-            // Cada página ocupa aproximadamente la mitad del ancho del contenedor, menos un poco de margen.
-            // Ajustamos para que ambas páginas y un espacio entre ellas encajen.
-            const totalWidthForTwoPages = pdfPagesContainer.clientWidth - 20; // 20px de margen entre paginas
-            const singlePageTargetWidth = totalWidthForTwoPages / 2;
-
-            const aspectRatio = viewport.width / viewport.height;
-            let calculatedScale = 1;
-
-            // Calcular escala basándose en el alto o ancho, priorizando el que rellene mejor
-            if ((singlePageTargetWidth / containerHeight) > aspectRatio) {
-                calculatedScale = containerHeight / viewport.height;
-            } else {
-                calculatedScale = singlePageTargetWidth / viewport.width;
-            }
-
-            // Aplicar el nivel de zoom del usuario
-            currentRenderScale = calculatedScale * zoomLevel;
-            const scaledViewport = page.getViewport({ scale: currentRenderScale });
-
-            canvasElement.height = scaledViewport.height;
-            canvasElement.width = scaledViewport.width;
+            canvasElement.height = viewport.height;
+            canvasElement.width = viewport.width;
 
             const context = canvasElement.getContext('2d');
             const renderContext = {
                 canvasContext: context,
-                viewport: scaledViewport,
+                viewport: viewport,
             };
 
             await page.render(renderContext).promise;
 
             // Ajustar el tamaño del wrapper para que coincida con el canvas escalado
-            wrapperElement.style.width = `${scaledViewport.width}px`;
-            wrapperElement.style.height = `${scaledViewport.height}px`;
+            wrapperElement.style.width = `${viewport.width}px`;
+            wrapperElement.style.height = `${viewport.height}px`;
         }
 
         /**
@@ -655,7 +696,7 @@
                 pageTurnSound.play().catch(e => console.error("Error al reproducir sonido:", e));
             }
 
-            // Añade clases de animación para el efecto de giro
+            // Aplica las clases de animación.
             if (direction === 'next') {
                 leftPageWrapper.classList.add('page-turn-next-left-out');
                 rightPageWrapper.classList.add('page-turn-next-right-out');
@@ -686,10 +727,9 @@
         async function goToPage(pageNum, animate = true) {
             if (!pdfDoc || isAnimating) return;
 
-            // Asegura que el número de página esté dentro de los límites
             let targetPage = Math.max(1, Math.min(pageNum, numPages));
 
-            // Para un flipbook, la "página actual" representa la página izquierda de un par.
+            // Para un flipbook de dos páginas, la "página actual" es la izquierda del par.
             // Si el targetPage es par y no es la última página, ajustamos a la impar anterior.
             if (targetPage % 2 === 0 && targetPage < numPages) {
                 targetPage--;
@@ -713,14 +753,14 @@
          * Navega al siguiente par de páginas.
          */
         function nextPage() {
-            if (currentPage < numPages) { // Asegura que no estemos en la última página individual
-                 // Si la página actual es la penúltima (y es impar), vamos a la última
+            if (currentPage < numPages) {
+                // Si la página actual es la penúltima (y es impar), vamos a la última
                 if (currentPage === numPages - 1 && numPages % 2 === 0) {
-                     goToPage(numPages);
+                    goToPage(numPages);
                 } else if (currentPage + 2 <= numPages) { // Si hay al menos dos páginas más
                     goToPage(currentPage + 2);
                 } else if (currentPage + 1 <= numPages) { // Si solo queda una página (la última)
-                     goToPage(numPages); // Ir a la última página, se mostrará sola
+                    goToPage(numPages); // Ir a la última página, se mostrará sola
                 }
             }
         }
@@ -752,9 +792,11 @@
          */
         function handleFullscreenChange() {
             if (document.fullscreenElement) {
-                body.classList.add('fullscreen');
+                body.classList.add('fullscreen-body');
+                viewerContainer.classList.add('fullscreen');
             } else {
-                body.classList.remove('fullscreen');
+                body.classList.remove('fullscreen-body');
+                viewerContainer.classList.remove('fullscreen');
             }
             // Re-renderiza las páginas para ajustar su escala al nuevo tamaño del contenedor
             renderPages();
@@ -765,7 +807,7 @@
          */
         function toggleSound() {
             soundEnabled = !soundEnabled;
-            soundToggleBtn.textContent = soundEnabled ? '🔊' : '🔇';
+            soundToggleIcon.className = soundEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
             pageTurnSound.muted = !soundEnabled; // Mute/unmute el elemento de audio
         }
 
@@ -1000,6 +1042,7 @@
 
         // --- Configuración Inicial al Cargar ---
         setBackground(); // Establece la imagen de fondo
+        pageTurnSound.src = PAGE_TURN_SOUND_URL; // Configura la URL del sonido
         whatsappBtn.href = `https://wa.me/${WHATSAPP_NUMBER}`; // Configura el enlace de WhatsApp
         checkUrlHash(); // Comprueba si hay un hash de página en la URL
         loadPdf(); // Carga el PDF
