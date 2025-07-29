@@ -17,8 +17,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- pdf.js AUTOHOSPEDADO -->
-    <!-- Ruta relativa a la carpeta 'lib/' dentro de 'public/' -->
-      <script src="/public/lib/pdf.js"></script>
+    <!-- Ruta COMPLETA y CORRECTA para Vercel si 'public/' no es la raíz del servidor -->
+    <!-- ¡IMPORTANTE!: Este script AHORA se carga con type="module" para resolver el SyntaxError -->
+    <script src="/public/lib/pdf.js" type="module"></script>
 
     <style>
         /* Estilos base del cuerpo */
@@ -508,23 +509,20 @@
     </div>
 
     <!-- Audio para la animación de pasar página -->
-    <audio id="pageTurnSound" src="" preload="auto"></audio> 
+    <!-- La ruta también debe incluir /public/ -->
+    <audio id="pageTurnSound" src="/public/page_turn_sound.mp3" preload="auto"></audio>
 
-    <script>
+    <!-- Script principal de la aplicación -->
+    <!-- ¡IMPORTANTE!: Este script AHORA es de tipo "module" para compatibilidad con pdf.js -->
+    <script type="module">
+        // Importa las funciones y objetos necesarios de pdf.js
+        // ¡La ruta aquí debe ser la misma que en el <script src> de arriba!
+        import { getDocument, GlobalWorkerOptions } from '/public/lib/pdf.js';
+
         // --- Configuración Global ---
-        // ¡MODIFICA ESTAS LÍNEAS SOLO SI LOS PASOS ANTERIORES NO FUNCIONARON!
-        // Esto asume que tu index.html está en public/ y que vercel no la esta sirviendo como root.
+        // Estas URLs ahora son relativas a la raíz de tu dominio de Vercel (que se mapea a la carpeta 'public/').
         const PDF_URL = '/public/mi_documento.pdf';
         const BACKGROUND_IMAGE_URL = '/public/fondo_elegante.png';
-        const PAGE_TURN_SOUND_URL = '/public/page_turn_sound.mp3';
-
-        const WHATSAPP_NUMBER = '59988237842';
-
-        // ... El resto de tu código JavaScript ...
-
-        // --- Inicializar Worker de PDF.js (apuntando a tu copia autohospedada dentro de public/lib/) ---
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/public/lib/pdf.worker.js';
-
         const WHATSAPP_NUMBER = '59988237842'; // Número de WhatsApp de prueba
 
         // --- Elementos del DOM ---
@@ -571,7 +569,8 @@
         let isAnimating = false; // Bandera para evitar clics rápidos durante la animación
 
         // --- Inicializar Worker de PDF.js (apuntando a tu copia autohospedada dentro de public/lib/) ---
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/public/lib/pdf.worker.js';
+        // ¡La ruta aquí debe ser la misma que para pdf.js!
+        GlobalWorkerOptions.workerSrc = '/public/lib/pdf.worker.js';
 
         // --- Funciones Principales ---
 
@@ -598,7 +597,7 @@
         async function loadPdf() {
             loadingOverlay.classList.remove('hidden'); // Mostrar spinner
             try {
-                const loadingTask = pdfjsLib.getDocument(PDF_URL);
+                const loadingTask = getDocument(PDF_URL); // Usar getDocument importado
                 pdfDoc = await loadingTask.promise;
                 numPages = pdfDoc.numPages;
                 totalPagesNumberSpan.textContent = numPages;
@@ -1079,7 +1078,7 @@
         // Se ejecuta una vez que todo el DOM está cargado
         document.addEventListener('DOMContentLoaded', () => {
             setBackground(); // Establece la imagen de fondo
-            pageTurnSound.src = PAGE_TURN_SOUND_URL; // Configura la URL del sonido de página
+            // pageTurnSound.src ya está establecida en el HTML
             whatsappBtn.href = `https://wa.me/${WHATSAPP_NUMBER}`; // Configura el enlace de WhatsApp
             checkUrlHash(); // Comprueba si hay un hash de página en la URL al cargar
             loadPdf(); // Inicia la carga del PDF
