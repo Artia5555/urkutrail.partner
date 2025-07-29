@@ -507,21 +507,26 @@
     </div>
 
     <!-- Audio para la animación de pasar página -->
-    <audio id="pageTurnSound" src="https://github.com/Artia5555/urkutrail.partner/blob/ddd3b37f7eb614413e64a97e9393f7f14c38dc40/page_turn_sound.mp3" preload="auto"></audio>
+    <audio id="pageTurnSound" src="" preload="auto"></audio>
 
     <script>
         // --- Configuración Global ---
-        // !!! MUY IMPORTANTE: REEMPLAZA ESTAS URLs CON LAS TUYAS PROPIAS !!!
-        // Para Vercel, si tus archivos (PDF, imagen, sonido) están dentro de la carpeta `public/`
-        // de tu proyecto, usa rutas relativas como las siguientes:
-        const PDF_URL = 'mi_documento.pdf'; // Ejemplo: '/my-awesome-book.pdf'
-        const BACKGROUND_IMAGE_URL = 'https://github.com/Artia5555/urkutrail.partner/blob/ddd3b37f7eb614413e64a97e9393f7f14c38dc40/mi_documento.pdf'; // Ejemplo: '/background-texture.jpg'
-        const PAGE_TURN_SOUND_URL = 'https://github.com/Artia5555/urkutrail.partner/blob/ddd3b37f7eb614413e64a97e9393f7f14c38dc40/page_turn_sound.mp3'; // Ejemplo: '/page-flip.mp3'
+        // !!! MODIFICA ESTAS LÍNEAS PARA TUS ARCHIVOS !!!
+        // Si tu 'index.html' y la carpeta 'public' están en la raíz de tu proyecto Vercel,
+        // entonces las rutas deben ser relativas a la raíz (empezando con '/').
+        const PDF_URL = '/mi_documento.pdf';
+        const BACKGROUND_IMAGE_URL = '/fondo_elegante.png';
+        const PAGE_TURN_SOUND_URL = '/page_turn_sound.mp3';
 
-        // Si prefieres usar URLs de ejemplo públicas para probar:
-        // const PDF_URL = 'mi_documento.pdf';
-        // const BACKGROUND_IMAGE_URL = 'fondo_elegante.png';
-        // const PAGE_TURN_SOUND_URL = 'page_turn_sound';
+        // --- SI USAS GITHUB PAGES y los archivos están en una carpeta 'assets/' junto a tu index.html:
+        // const PDF_URL = './assets/mi_documento.pdf';
+        // const BACKGROUND_IMAGE_URL = './assets/fondo_elegante.png';
+        // const PAGE_TURN_SOUND_URL = './assets/page_turn_sound.mp3';
+
+        // --- SI QUIERES USAR EJEMPLOS PÚBLICOS PARA PROBAR:
+        // const PDF_URL = 'https://mozilla.github.io/pdf.js/examples/learning/helloworld.pdf';
+        // const BACKGROUND_IMAGE_URL = 'https://images.unsplash.com/photo-1519681393784-a93987cb0f4a?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+        // const PAGE_TURN_SOUND_URL = 'https://assets.mixkit.co/sfx/preview/mixkit-paper-turn-page-002.mp3';
 
         const WHATSAPP_NUMBER = '59988237842'; // Número de WhatsApp de prueba
 
@@ -581,6 +586,14 @@
          */
         function setBackground() {
             body.style.backgroundImage = `url('${BACKGROUND_IMAGE_URL}')`;
+            // Puedes añadir un .onerror para saber si la imagen no carga
+            const img = new Image();
+            img.src = BACKGROUND_IMAGE_URL;
+            img.onerror = () => {
+                console.error("Error al cargar la imagen de fondo:", BACKGROUND_IMAGE_URL);
+                body.style.backgroundColor = '#1a202c'; // Fallback a color sólido
+                body.style.backgroundImage = 'none';
+            };
         }
 
         /**
