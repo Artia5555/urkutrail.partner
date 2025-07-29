@@ -513,10 +513,11 @@
     <script>
         // --- Configuración Global ---
         // ¡Estas URLs ahora son correctas para Vercel ASUMIENDO que todos los archivos están dentro de la carpeta 'public/'!
-        const PDF_URL = 'https://i.ibb.co/Pv8wp3rw/mi-documento.jpg';
-        const BACKGROUND_IMAGE_URL = '/fondo_elegante.png';
-        const PAGE_TURN_SOUND_URL = '/page_turn_sound.mp3';
-
+        const PDF_URL = '/public/mi_documento.pdf';
+const BACKGROUND_IMAGE_URL = '/public/fondo_elegante.png';
+const PAGE_TURN_SOUND_URL = '/public/page_turn_sound.mp3';
+// Y también:
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/public/lib/pdf.worker.js';
         const WHATSAPP_NUMBER = '59988237842'; // Número de WhatsApp de prueba
 
         // --- Elementos del DOM ---
